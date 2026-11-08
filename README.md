@@ -79,7 +79,7 @@ dotnet format --verify-no-changes
 
 ## Deploy en Render
 
-Ver [docs/deploy-render.md](docs/deploy-render.md) *(se agregará en Phase 4)*.
+Ver [docs/deploy-render.md](docs/deploy-render.md) para la guía completa paso a paso.
 
 ---
 

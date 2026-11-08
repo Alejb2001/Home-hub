@@ -1,0 +1,11 @@
+.git
+.vs
+.idea
+.vscode
+**/bin/
+**/obj/
+**/node_modules/
+src/HomeHub.Api/wwwroot/
+**/.env
+**/*.user
+**/TestResults/
