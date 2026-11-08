@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Skill(harness:harness-plan)",
-      "Skill(harness:harness-work)"
+      "Skill(harness:harness-work)",
+      "WebSearch"
     ]
   }
 }
