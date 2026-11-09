@@ -50,8 +50,8 @@ Purpose: Empaquetar la app como imagen Docker y prepararla para deploy en Render
 
 | Task | Contenido | DoD | Depends | Status |
 |------|-----------|-----|---------|--------|
-| 4.1 | `[Feature]` `[lane:gate]` `[tdd:skip:dockerfile]` Dockerfile multi-stage (node:20-alpine → sdk:10.0 → aspnet:10.0, puerto 8080). | Dockerfile + .dockerignore creados; build verificado localmente (stages correctos) | Phase 3 | cc:完了 [pending] |
-| 4.2 | `[Docs]` `[lane:release]` `[tdd:skip:docs-only]` docs/deploy-render.md + README actualizado. | docs/deploy-render.md con pasos completos, env vars, troubleshooting | 4.1 | cc:完了 [pending] |
+| 4.1 | `[Feature]` `[lane:gate]` `[tdd:skip:dockerfile]` Dockerfile multi-stage (node:20-alpine → sdk:10.0 → aspnet:10.0, puerto 8080). | Dockerfile + .dockerignore creados; build verificado localmente (stages correctos) | Phase 3 | cc:完了 [de14331] |
+| 4.2 | `[Docs]` `[lane:release]` `[tdd:skip:docs-only]` docs/deploy-render.md + README actualizado. | docs/deploy-render.md con pasos completos, env vars, troubleshooting | 4.1 | cc:完了 [de14331] |
 
 ---
 
