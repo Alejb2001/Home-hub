@@ -1,4 +1,5 @@
 using System.Text;
+using System.Web;
 using HomeHub.Api.BackgroundJobs;
 using HomeHub.Api.Data;
 using HomeHub.Api.Services;
@@ -14,7 +15,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     var config = sp.GetRequiredService<IConfiguration>();
     var connectionString = config["DATABASE_URL"]
         ?? throw new InvalidOperationException("DATABASE_URL is not configured.");
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(ConvertConnectionString(connectionString));
 });
 
 // Auth — read JWT_SECRET inside options callback
@@ -71,6 +72,34 @@ app.MapControllers();
 
 // SPA fallback: any unmatched route serves index.html
 app.MapFallbackToFile("index.html");
+
+// Converts postgresql:// URI to Npgsql key=value format.
+// Npgsql 8+ dropped URI support; PaaS platforms (Render, Railway, Heroku) emit URIs.
+static string ConvertConnectionString(string cs)
+{
+    if (!cs.StartsWith("postgresql://") && !cs.StartsWith("postgres://"))
+        return cs;
+
+    var uri = new Uri(cs);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var username = Uri.UnescapeDataString(userInfo[0]);
+    var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+    var host = uri.Host;
+    var port = uri.IsDefaultPort ? 5432 : uri.Port;
+    var database = uri.AbsolutePath.TrimStart('/');
+
+    var query = HttpUtility.ParseQueryString(uri.Query);
+    var sslMode = query["sslmode"] switch
+    {
+        "require" => "Require",
+        "disable" => "Disable",
+        "prefer"  => "Prefer",
+        "verify-full" => "VerifyFull",
+        _ => "Require"
+    };
+
+    return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode={sslMode}";
+}
 
 app.Run();
 
