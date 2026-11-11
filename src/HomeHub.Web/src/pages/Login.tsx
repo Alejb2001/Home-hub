@@ -17,40 +17,61 @@ export default function Login() {
       await login(username, password)
       navigate('/')
     } catch {
-      setError('Usuario o contraseña incorrectos.')
+      setError('Usuario o contrasena incorrectos.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Home Hub</h1>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input
-            type="text"
-            placeholder="Usuario"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          />
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-slate-900">
+      <div className="bg-slate-800 border border-slate-700 p-8 w-full max-w-sm">
+        <div className="mb-8 border-l-2 border-amber-400 pl-4">
+          <p className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1">
+            Sistema de monitoreo
+          </p>
+          <h1 className="font-mono text-xl font-bold text-slate-100 tracking-wide">Home Hub</h1>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+              Usuario
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+              Contrasena
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+            />
+          </div>
+
+          {error && (
+            <p className="font-mono text-xs text-amber-400 border border-amber-400/30 bg-amber-400/5 px-3 py-2 tracking-wide">
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
             disabled={loading}
-            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold py-2 rounded-lg transition disabled:opacity-50"
+            className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-mono font-bold py-2.5 text-xs tracking-widest uppercase transition-colors disabled:opacity-40 mt-1"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Verificando...' : 'Acceder'}
           </button>
         </form>
       </div>

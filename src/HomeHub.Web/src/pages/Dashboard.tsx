@@ -13,12 +13,33 @@ import {
 import { getSummary, getHistory } from '../api/client'
 import Layout from '../components/Layout'
 
+const CHART = {
+  grid: '#334155',
+  tick: { fill: '#64748b', fontSize: 10, fontFamily: 'ui-monospace, monospace' },
+  tooltip: {
+    contentStyle: {
+      backgroundColor: '#1e293b',
+      border: '1px solid #475569',
+      borderRadius: 0,
+      color: '#f1f5f9',
+      fontSize: 11,
+      fontFamily: 'ui-monospace, monospace',
+    },
+  },
+}
+
 function StatusBadge({ status }: { status: number }) {
+  const online = status === 1
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-widest border ${
+        online
+          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+          : 'border-red-500/40 bg-red-500/10 text-red-400'
+      }`}
     >
-      {status === 1 ? 'Online' : 'Offline'}
+      <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-red-400'}`} />
+      {online ? 'Online' : 'Offline'}
     </span>
   )
 }
@@ -35,13 +56,24 @@ function SummaryCard({
   children?: React.ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col gap-1">
-      <span className="text-sm text-gray-500">{label}</span>
-      <div className="flex items-baseline gap-1">
-        <span className="text-3xl font-bold text-gray-800">{value}</span>
-        <span className="text-sm text-gray-400">{unit}</span>
+    <div className="bg-slate-800 border border-slate-700 border-t-2 border-t-amber-400/70 p-5 flex flex-col gap-2">
+      <span className="font-mono text-xs text-slate-500 uppercase tracking-widest">{label}</span>
+      <div className="flex items-baseline gap-2">
+        <span className="font-mono text-3xl font-bold text-slate-100">{value}</span>
+        {unit && <span className="font-mono text-sm text-amber-400">{unit}</span>}
       </div>
       {children}
+    </div>
+  )
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <span className="w-0.5 h-5 bg-amber-400 inline-block" />
+      <h1 className="font-mono text-xs font-bold text-slate-300 uppercase tracking-widest">
+        {children}
+      </h1>
     </div>
   )
 }
@@ -50,7 +82,7 @@ export default function Dashboard() {
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['solar-summary'],
     queryFn: getSummary,
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   })
 
   const now = new Date()
@@ -68,7 +100,6 @@ export default function Dashboard() {
     queryFn: () => getHistory(sevenDaysAgo, now.toISOString()),
   })
 
-  // Aggregate energy per day for the last 7 days
   const dailyEnergy = (() => {
     if (!weekReadings) return []
     const byDay: Record<string, number> = {}
@@ -78,10 +109,9 @@ export default function Dashboard() {
     }
     return Object.entries(byDay)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, kwh]) => ({ date: date.slice(5), kwh })) // "MM-DD"
+      .map(([date, kwh]) => ({ date: date.slice(5), kwh }))
   })()
 
-  // Power curve today
   const powerCurve = (todayReadings ?? []).map((r) => ({
     time: new Date(r.timestampUtc).toLocaleTimeString('es-ES', {
       hour: '2-digit',
@@ -93,68 +123,91 @@ export default function Dashboard() {
   if (summaryLoading) {
     return (
       <Layout>
-        <div className="text-gray-400 text-center py-20">Cargando...</div>
+        <div className="font-mono text-slate-600 text-center py-20 tracking-widest text-xs uppercase">
+          Cargando...
+        </div>
       </Layout>
     )
   }
 
   return (
     <Layout>
-      <h1 className="text-xl font-semibold text-gray-700 mb-4">Paneles Solares — Hoy</h1>
+      <SectionHeader>Paneles Solares — Hoy</SectionHeader>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <SummaryCard
           label="Potencia actual"
           value={summary ? summary.powerW.toFixed(0) : '—'}
           unit="W"
         />
         <SummaryCard
-          label="Energía generada hoy"
+          label="Energia generada hoy"
           value={summary ? summary.energyTodayKwh.toFixed(2) : '—'}
           unit="kWh"
         />
-        <SummaryCard label="Estado" value="" unit="">
+        <SummaryCard label="Estado del inversor" value="" unit="">
           {summary ? (
             <StatusBadge status={summary.status} />
           ) : (
-            <span className="text-gray-400">—</span>
+            <span className="font-mono text-slate-600">—</span>
           )}
         </SummaryCard>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-sm font-medium text-gray-500 mb-3">Energía últimos 7 días (kWh)</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="bg-slate-800 border border-slate-700 p-5">
+          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+            Energia — ultimos 7 dias (kWh)
+          </h2>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dailyEnergy}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => [`${Number(v).toFixed(2)} kWh`, 'Energía']} />
-              <Bar dataKey="kwh" fill="#facc15" radius={[4, 4, 0, 0]} />
+            <BarChart data={dailyEnergy} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
+              <XAxis dataKey="date" tick={CHART.tick} axisLine={false} tickLine={false} />
+              <YAxis tick={CHART.tick} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v) => [`${Number(v).toFixed(2)} kWh`, 'Energia']}
+                contentStyle={CHART.tooltip.contentStyle}
+                cursor={{ fill: '#1e3a5f30' }}
+              />
+              <Bar dataKey="kwh" fill="#f59e0b" radius={[1, 1, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-sm font-medium text-gray-500 mb-3">Potencia hoy (W)</h2>
+        <div className="bg-slate-800 border border-slate-700 p-5">
+          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+            Potencia hoy (W)
+          </h2>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={powerCurve}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => [`${Number(v).toFixed(0)} W`, 'Potencia']} />
-              <Line type="monotone" dataKey="watts" stroke="#f59e0b" dot={false} strokeWidth={2} />
+            <LineChart data={powerCurve} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
+              <XAxis
+                dataKey="time"
+                tick={CHART.tick}
+                axisLine={false}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis tick={CHART.tick} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v) => [`${Number(v).toFixed(0)} W`, 'Potencia']}
+                contentStyle={CHART.tooltip.contentStyle}
+              />
+              <Line
+                type="monotone"
+                dataKey="watts"
+                stroke="#f59e0b"
+                dot={false}
+                strokeWidth={2}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {summary && (
-        <p className="text-xs text-gray-400 mt-4 text-right">
-          Última actualización: {new Date(summary.lastUpdated).toLocaleString('es-ES')}
+        <p className="font-mono text-xs text-slate-700 mt-4 text-right tracking-widest uppercase">
+          Sync: {new Date(summary.lastUpdated).toLocaleString('es-ES')}
         </p>
       )}
     </Layout>

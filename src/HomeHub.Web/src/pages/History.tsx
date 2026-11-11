@@ -12,6 +12,21 @@ import {
 import { getHistory, type SolarReading } from '../api/client'
 import Layout from '../components/Layout'
 
+const CHART = {
+  grid: '#334155',
+  tick: { fill: '#64748b', fontSize: 10, fontFamily: 'ui-monospace, monospace' },
+  tooltip: {
+    contentStyle: {
+      backgroundColor: '#1e293b',
+      border: '1px solid #475569',
+      borderRadius: 0,
+      color: '#f1f5f9',
+      fontSize: 11,
+      fontFamily: 'ui-monospace, monospace',
+    },
+  },
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('es-ES', {
     day: '2-digit',
@@ -22,13 +37,7 @@ function formatDate(iso: string) {
 }
 
 function downloadCsv(readings: SolarReading[]) {
-  const headers = [
-    'Fecha UTC',
-    'Potencia (W)',
-    'Energía hoy (kWh)',
-    'Energía total (kWh)',
-    'Estado',
-  ]
+  const headers = ['Fecha UTC', 'Potencia (W)', 'Energia hoy (kWh)', 'Energia total (kWh)', 'Estado']
   const rows = readings.map((r) => [
     r.timestampUtc,
     r.powerW,
@@ -68,75 +77,100 @@ export default function History() {
 
   return (
     <Layout>
-      <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-gray-700">Historial Solar</h1>
-        <div className="flex items-center gap-2 ml-auto">
-          <label className="text-sm text-gray-500">Desde</label>
+      {/* Header row */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5">
+        <div className="flex items-center gap-3">
+          <span className="w-0.5 h-5 bg-amber-400 inline-block" />
+          <h1 className="font-mono text-xs font-bold text-slate-300 uppercase tracking-widest">
+            Historial Solar
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-3 sm:ml-auto">
+          <label className="font-mono text-xs text-slate-500 uppercase tracking-widest">Desde</label>
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="bg-slate-800 border border-slate-600 text-slate-200 font-mono px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 transition-colors"
           />
-          <label className="text-sm text-gray-500">Hasta</label>
+          <label className="font-mono text-xs text-slate-500 uppercase tracking-widest">Hasta</label>
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="bg-slate-800 border border-slate-600 text-slate-200 font-mono px-3 py-1.5 text-xs focus:outline-none focus:border-amber-400 transition-colors"
           />
         </div>
       </div>
 
       {/* Chart */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
-        <h2 className="text-sm font-medium text-gray-500 mb-3">Potencia (W)</h2>
+      <div className="bg-slate-800 border border-slate-700 p-5 mb-3">
+        <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+          Potencia (W)
+        </h2>
         {isLoading ? (
-          <div className="text-gray-400 text-center py-10">Cargando...</div>
+          <div className="font-mono text-slate-600 text-center py-10 text-xs uppercase tracking-widest">
+            Cargando...
+          </div>
         ) : chartData.length === 0 ? (
-          <div className="text-gray-400 text-center py-10">
-            Sin datos para el período seleccionado.
+          <div className="font-mono text-slate-600 text-center py-10 text-xs uppercase tracking-widest">
+            Sin datos para el periodo seleccionado.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <LineChart data={chartData} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
               <XAxis
                 dataKey="time"
-                tick={{ fontSize: 10 }}
+                tick={CHART.tick}
+                axisLine={false}
+                tickLine={false}
                 interval={Math.floor(chartData.length / 8)}
               />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => [`${Number(v).toFixed(0)} W`, 'Potencia']} />
-              <Line type="monotone" dataKey="watts" stroke="#f59e0b" dot={false} strokeWidth={2} />
+              <YAxis tick={CHART.tick} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v) => [`${Number(v).toFixed(0)} W`, 'Potencia']}
+                contentStyle={CHART.tooltip.contentStyle}
+              />
+              <Line
+                type="monotone"
+                dataKey="watts"
+                stroke="#f59e0b"
+                dot={false}
+                strokeWidth={2}
+              />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      {/* Table + export */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-gray-500">{readings.length} lecturas</h2>
+      {/* Table */}
+      <div className="bg-slate-800 border border-slate-700 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <span className="font-mono text-xs text-slate-500 uppercase tracking-widest">
+            {readings.length} lecturas
+          </span>
           {readings.length > 0 && (
             <button
               onClick={() => downloadCsv(readings)}
-              className="text-sm bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-medium px-3 py-1.5 rounded-lg transition"
+              className="font-mono text-xs bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-4 py-1.5 uppercase tracking-widest transition-colors"
             >
               Exportar CSV
             </button>
           )}
         </div>
+
         {readings.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-600">
-              <thead className="text-xs text-gray-400 uppercase border-b">
-                <tr>
-                  <th className="py-2 pr-4">Fecha</th>
-                  <th className="py-2 pr-4">Potencia (W)</th>
-                  <th className="py-2 pr-4">Hoy (kWh)</th>
-                  <th className="py-2 pr-4">Total (kWh)</th>
-                  <th className="py-2">Estado</th>
+            <table className="w-full text-xs font-mono text-left">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="py-2 pr-4 text-slate-500 uppercase tracking-widest font-medium">Fecha</th>
+                  <th className="py-2 pr-4 text-slate-500 uppercase tracking-widest font-medium">Potencia (W)</th>
+                  <th className="py-2 pr-4 text-slate-500 uppercase tracking-widest font-medium">Hoy (kWh)</th>
+                  <th className="py-2 pr-4 text-slate-500 uppercase tracking-widest font-medium">Total (kWh)</th>
+                  <th className="py-2 text-slate-500 uppercase tracking-widest font-medium">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -144,14 +178,18 @@ export default function History() {
                   .slice(-50)
                   .reverse()
                   .map((r) => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-1.5 pr-4">{formatDate(r.timestampUtc)}</td>
-                      <td className="py-1.5 pr-4">{r.powerW.toFixed(0)}</td>
-                      <td className="py-1.5 pr-4">{r.energyTodayKwh.toFixed(3)}</td>
-                      <td className="py-1.5 pr-4">{r.energyTotalKwh.toFixed(1)}</td>
+                    <tr key={r.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="py-1.5 pr-4 text-slate-400">{formatDate(r.timestampUtc)}</td>
+                      <td className="py-1.5 pr-4 text-slate-200">{r.powerW.toFixed(0)}</td>
+                      <td className="py-1.5 pr-4 text-slate-200">{r.energyTodayKwh.toFixed(3)}</td>
+                      <td className="py-1.5 pr-4 text-slate-200">{r.energyTotalKwh.toFixed(1)}</td>
                       <td className="py-1.5">
                         <span
-                          className={`px-1.5 py-0.5 rounded text-xs font-medium ${r.status === 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                          className={`px-2 py-0.5 text-xs uppercase tracking-widest border ${
+                            r.status === 1
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                              : 'border-red-500/40 bg-red-500/10 text-red-400'
+                          }`}
                         >
                           {r.status === 1 ? 'Online' : 'Offline'}
                         </span>
