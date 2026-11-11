@@ -32,11 +32,14 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
 
         var content = new FormUrlEncodedContent([
             new KeyValuePair<string, string>("account", _user),
-            new KeyValuePair<string, string>("password", passwordHash)
+            new KeyValuePair<string, string>("password", ""),
+            new KeyValuePair<string, string>("validateCode", ""),
+            new KeyValuePair<string, string>("isReadPact", "0"),
+            new KeyValuePair<string, string>("passwordCrc", passwordHash)
         ]);
 
         var response = await httpClient.PostAsync(
-            $"{_serverUrl}/newTwoLoginAPI.do", content, ct);
+            $"{_serverUrl}/login", content, ct);
 
         response.EnsureSuccessStatusCode();
 
