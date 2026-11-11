@@ -88,8 +88,6 @@ Ver [docs/deploy-render.md](docs/deploy-render.md) para la guía completa paso a
 | Variable | Descripción |
 |----------|-------------|
 | `DATABASE_URL` | Connection string de Neon PostgreSQL |
-| `ADMIN_USER` | Usuario del login web |
-| `ADMIN_PASSWORD` | Contraseña del login web |
 | `JWT_SECRET` | Clave para firmar tokens JWT (string aleatorio largo) |
-| `GROWATT_USER` | Email de cuenta ShinePhone/Growatt |
-| `GROWATT_PASSWORD` | Contraseña de cuenta ShinePhone/Growatt |
+| `GROWATT_USER` | Email de cuenta ShinePhone/Growatt (es también el usuario del login web) |
+| `GROWATT_PASSWORD` | Contraseña de cuenta ShinePhone/Growatt (es también la contraseña del login web) |

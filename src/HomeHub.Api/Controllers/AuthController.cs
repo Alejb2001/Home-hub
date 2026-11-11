@@ -13,8 +13,8 @@ public class AuthController(IConfiguration configuration) : ControllerBase
     [HttpPost("login")]
     public IActionResult Login([FromBody] LoginRequest request)
     {
-        var adminUser = configuration["ADMIN_USER"];
-        var adminPassword = configuration["ADMIN_PASSWORD"];
+        var adminUser = configuration["GROWATT_USER"];
+        var adminPassword = configuration["GROWATT_PASSWORD"];
         var jwtSecret = configuration["JWT_SECRET"]
             ?? throw new InvalidOperationException("JWT_SECRET not configured.");
 

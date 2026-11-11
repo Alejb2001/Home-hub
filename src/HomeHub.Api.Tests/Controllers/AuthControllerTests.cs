@@ -23,11 +23,9 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["ADMIN_USER"] = "testuser",
-                    ["ADMIN_PASSWORD"] = "testpass",
                     ["JWT_SECRET"] = "super-secret-key-for-testing-purposes-only-32chars",
                     ["GROWATT_USER"] = "test@test.com",
-                    ["GROWATT_PASSWORD"] = "password"
+                    ["GROWATT_PASSWORD"] = "testpass"
                 });
             });
             builder.ConfigureServices(services =>
@@ -47,7 +45,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithCorrectCredentials_ReturnsTokenAndOk()
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login",
-            new LoginRequest("testuser", "testpass"));
+            new LoginRequest("test@test.com", "testpass"));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -61,7 +59,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithWrongPassword_Returns401()
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login",
-            new LoginRequest("testuser", "wrongpass"));
+            new LoginRequest("test@test.com", "wrongpass"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -70,7 +68,7 @@ public class AuthControllerTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task Login_WithWrongUsername_Returns401()
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login",
-            new LoginRequest("wronguser", "testpass"));
+            new LoginRequest("wrong@test.com", "testpass"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }

@@ -46,11 +46,9 @@ En la sección **Environment Variables** del servicio en Render, agrega:
 | Variable | Valor | Cómo obtenerlo |
 |----------|-------|----------------|
 | `DATABASE_URL` | `postgresql://user:pass@host.neon.tech/dbname?sslmode=require` | Neon dashboard → Connection string |
-| `ADMIN_USER` | `tu_usuario` | Elige un nombre de usuario para el login |
-| `ADMIN_PASSWORD` | `tu_contraseña_segura` | Elige una contraseña segura |
 | `JWT_SECRET` | `string_aleatorio_largo` | Genera con: `openssl rand -base64 32` |
-| `GROWATT_USER` | `tu@email.com` | El email de tu cuenta ShinePhone |
-| `GROWATT_PASSWORD` | `tu_contraseña_growatt` | La contraseña de tu cuenta ShinePhone |
+| `GROWATT_USER` | `tu@email.com` | El email de tu cuenta ShinePhone (también es el usuario del login web) |
+| `GROWATT_PASSWORD` | `tu_contraseña_growatt` | La contraseña de ShinePhone (también es la contraseña del login web) |
 
 > **Importante:** Render guarda estas variables de forma segura. Nunca las escribas en archivos del repositorio.
 
