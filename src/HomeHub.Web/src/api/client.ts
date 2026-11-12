@@ -78,8 +78,10 @@ export interface SolarStats {
   to: string
 }
 
-export function getSummary(): Promise<SolarSummary> {
-  return request<SolarSummary>('/solar/summary')
+export async function getSummary(): Promise<SolarSummary | null> {
+  const data = await request<SolarSummary | { message: string }>('/solar/summary')
+  if ('message' in data) return null
+  return data
 }
 
 export function getHistory(from: string, to: string): Promise<SolarReading[]> {
