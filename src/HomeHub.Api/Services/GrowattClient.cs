@@ -23,6 +23,7 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         ?? throw new InvalidOperationException("GROWATT_PASSWORD is not configured.");
 
     private bool _isLoggedIn = false;
+    private string? _userId = null;
 
     private async Task EnsureLoggedInAsync(CancellationToken ct)
     {
@@ -55,22 +56,26 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             throw new GrowattApiException($"Growatt login failed: {result?.Msg}");
         }
 
+        _userId = result.User?.Id;
         _isLoggedIn = true;
-        logger.LogInformation("Growatt login successful for user {User}", _user);
+        logger.LogInformation("Growatt login successful for user {User}, userId={UserId}", _user, _userId ?? "not-in-response");
     }
 
     public async Task<GrowattPlantInfo> GetPlantInfoAsync(CancellationToken ct = default)
     {
         await EnsureLoggedInAsync(ct);
 
-        var content = new FormUrlEncodedContent([]);
-        var response = await httpClient.PostAsync(
-            $"{_serverUrl}/index/getUserPlantList", content, ct);
+        var plantUrl = _userId != null
+            ? $"{_serverUrl}/index/getUserPlantList?userId={_userId}"
+            : $"{_serverUrl}/index/getUserPlantList";
+        var response = await httpClient.GetAsync(plantUrl, ct);
 
+        var plantBody = await response.Content.ReadAsStringAsync(ct);
+        logger.LogInformation("getUserPlantList status={Status}, body={Body}",
+            (int)response.StatusCode, plantBody.Length > 300 ? plantBody[..300] : plantBody);
         response.EnsureSuccessStatusCode();
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        var result = JsonSerializer.Deserialize<GrowattPlantListResponse>(json);
+        var result = JsonSerializer.Deserialize<GrowattPlantListResponse>(plantBody);
 
         var plant = result?.Data?.FirstOrDefault()
             ?? throw new GrowattApiException("No plants found on Growatt account.");
@@ -145,6 +150,15 @@ file class GrowattLoginResponse
 
     [JsonPropertyName("msg")]
     public string? Msg { get; set; }
+
+    [JsonPropertyName("user")]
+    public GrowattLoginUser? User { get; set; }
+}
+
+file class GrowattLoginUser
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
 }
 
 file class GrowattPlantListResponse
