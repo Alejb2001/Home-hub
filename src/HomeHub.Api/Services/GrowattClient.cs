@@ -23,7 +23,6 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         ?? throw new InvalidOperationException("GROWATT_PASSWORD is not configured.");
 
     private bool _isLoggedIn = false;
-    private string? _userId = null;
 
     private async Task EnsureLoggedInAsync(CancellationToken ct)
     {
@@ -40,13 +39,10 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             new KeyValuePair<string, string>("passwordCrc", passwordHash)
         ]);
 
-        var response = await httpClient.PostAsync(
-            $"{_serverUrl}/login", content, ct);
-
+        var response = await httpClient.PostAsync($"{_serverUrl}/login", content, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
-        logger.LogInformation("Growatt login response: {Json}", json);
         var result = JsonSerializer.Deserialize<GrowattLoginResponse>(json);
 
         if (result?.Result != 1)
@@ -56,79 +52,65 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             throw new GrowattApiException($"Growatt login failed: {result?.Msg}");
         }
 
-        _userId = result.User?.Id;
         _isLoggedIn = true;
-        logger.LogInformation("Growatt login successful for user {User}, userId={UserId}", _user, _userId ?? "not-in-response");
+        logger.LogInformation("Growatt login successful for user {User}", _user);
     }
 
+    // Returns the first plant's ID and name. InverterSn is populated later via GetCurrentReadingAsync.
     public async Task<GrowattPlantInfo> GetPlantInfoAsync(CancellationToken ct = default)
     {
         await EnsureLoggedInAsync(ct);
 
-        var plantUrl = _userId != null
-            ? $"{_serverUrl}/index/getUserPlantList?userId={_userId}"
-            : $"{_serverUrl}/index/getUserPlantList";
-        var response = await httpClient.GetAsync(plantUrl, ct);
-
-        var plantBody = await response.Content.ReadAsStringAsync(ct);
-        logger.LogInformation("getUserPlantList status={Status}, body={Body}",
-            (int)response.StatusCode, plantBody.Length > 300 ? plantBody[..300] : plantBody);
+        // POST /index/getPlantListTitle — returns a JSON array of plants (session-based, no userId needed)
+        var response = await httpClient.PostAsync(
+            $"{_serverUrl}/index/getPlantListTitle",
+            new FormUrlEncodedContent([]), ct);
         response.EnsureSuccessStatusCode();
 
-        var result = JsonSerializer.Deserialize<GrowattPlantListResponse>(plantBody);
+        var json = await response.Content.ReadAsStringAsync(ct);
+        logger.LogInformation("getPlantListTitle: {Json}", json.Length > 300 ? json[..300] : json);
 
-        var plant = result?.Data?.FirstOrDefault()
+        var plants = JsonSerializer.Deserialize<List<GrowattPlantTitle>>(json);
+        var plant = plants?.FirstOrDefault()
             ?? throw new GrowattApiException("No plants found on Growatt account.");
 
-        // Get inverter serial for this plant
-        var inverterContent = new FormUrlEncodedContent([
-            new KeyValuePair<string, string>("plantId", plant.PlantId),
-            new KeyValuePair<string, string>("currPage", "1")
-        ]);
-
-        var invResponse = await httpClient.PostAsync(
-            $"{_serverUrl}/device/getDevicesByPlantList", inverterContent, ct);
-
-        invResponse.EnsureSuccessStatusCode();
-
-        var invJson = await invResponse.Content.ReadAsStringAsync(ct);
-        var invResult = JsonSerializer.Deserialize<GrowattInverterListResponse>(invJson);
-
-        var inverter = invResult?.Data?.Datas?.FirstOrDefault()
-            ?? throw new GrowattApiException("No inverters found for plant.");
-
-        return new GrowattPlantInfo(plant.PlantId, plant.PlantName, inverter.Sn);
+        return new GrowattPlantInfo(plant.Id, plant.PlantName, "");
     }
 
+    // Fetches all device data for the plant in one call.
+    // inverterSn param is unused — the response provides the actual SN.
     public async Task<SolarReading> GetCurrentReadingAsync(
         string plantId, string inverterSn, CancellationToken ct = default)
     {
         await EnsureLoggedInAsync(ct);
 
         var content = new FormUrlEncodedContent([
-            new KeyValuePair<string, string>("op", "getData"),
-            new KeyValuePair<string, string>("id", inverterSn),
-            new KeyValuePair<string, string>("type", "1")
+            new KeyValuePair<string, string>("currPage", "1"),
+            new KeyValuePair<string, string>("plantId", plantId)
         ]);
 
         var response = await httpClient.PostAsync(
-            $"{_serverUrl}/device/getInverterData", content, ct);
-
+            $"{_serverUrl}/panel/getDevicesByPlantList", content, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
-        var result = JsonSerializer.Deserialize<GrowattInverterDataResponse>(json)
-            ?? throw new GrowattApiException("Empty response from Growatt API.");
+        logger.LogInformation("getDevicesByPlantList: {Json}", json.Length > 400 ? json[..400] : json);
+
+        var result = JsonSerializer.Deserialize<GrowattDeviceListResponse>(json)
+            ?? throw new GrowattApiException("Empty response from getDevicesByPlantList.");
+
+        var device = result.Obj?.Datas?.FirstOrDefault()
+            ?? throw new GrowattApiException("No devices found in plant.");
 
         return new SolarReading
         {
             PlantId = plantId,
-            InverterSn = inverterSn,
+            InverterSn = device.Sn ?? inverterSn,
             TimestampUtc = DateTimeOffset.UtcNow,
-            PowerW = decimal.TryParse(result.Data?.Pac, out var pac) ? pac : 0,
-            EnergyTodayKwh = decimal.TryParse(result.Data?.EToday, out var etoday) ? etoday : 0,
-            EnergyTotalKwh = decimal.TryParse(result.Data?.ETotal, out var etotal) ? etotal : 0,
-            Status = short.TryParse(result.Data?.Status, out var status) ? status : (short)0
+            PowerW = decimal.TryParse(device.Pac, out var pac) ? pac : 0,
+            EnergyTodayKwh = decimal.TryParse(device.EToday, out var etoday) ? etoday : 0,
+            EnergyTotalKwh = decimal.TryParse(device.ETotal, out var etotal) ? etotal : 0,
+            Status = short.TryParse(device.Status, out var status) ? status : (short)0
         };
     }
 
@@ -150,65 +132,46 @@ file class GrowattLoginResponse
 
     [JsonPropertyName("msg")]
     public string? Msg { get; set; }
-
-    [JsonPropertyName("user")]
-    public GrowattLoginUser? User { get; set; }
 }
 
-file class GrowattLoginUser
+// POST /index/getPlantListTitle returns a JSON array of these
+file class GrowattPlantTitle
 {
     [JsonPropertyName("id")]
-    public string? Id { get; set; }
-}
-
-file class GrowattPlantListResponse
-{
-    [JsonPropertyName("data")]
-    public List<GrowattPlant>? Data { get; set; }
-}
-
-file class GrowattPlant
-{
-    [JsonPropertyName("plantId")]
-    public string PlantId { get; set; } = "";
+    public string Id { get; set; } = "";
 
     [JsonPropertyName("plantName")]
     public string PlantName { get; set; } = "";
 }
 
-file class GrowattInverterListResponse
+// POST /panel/getDevicesByPlantList
+file class GrowattDeviceListResponse
 {
-    [JsonPropertyName("data")]
-    public GrowattInverterData? Data { get; set; }
+    [JsonPropertyName("result")]
+    public int Result { get; set; }
+
+    [JsonPropertyName("obj")]
+    public GrowattDeviceListObj? Obj { get; set; }
 }
 
-file class GrowattInverterData
+file class GrowattDeviceListObj
 {
     [JsonPropertyName("datas")]
-    public List<GrowattInverter>? Datas { get; set; }
+    public List<GrowattDeviceData>? Datas { get; set; }
 }
 
-file class GrowattInverter
+file class GrowattDeviceData
 {
     [JsonPropertyName("sn")]
-    public string Sn { get; set; } = "";
-}
+    public string? Sn { get; set; }
 
-file class GrowattInverterDataResponse
-{
-    [JsonPropertyName("data")]
-    public GrowattInverterValues? Data { get; set; }
-}
-
-file class GrowattInverterValues
-{
     [JsonPropertyName("pac")]
     public string? Pac { get; set; }
 
-    [JsonPropertyName("etoday")]
+    [JsonPropertyName("eToday")]
     public string? EToday { get; set; }
 
-    [JsonPropertyName("etotal")]
+    [JsonPropertyName("eTotal")]
     public string? ETotal { get; set; }
 
     [JsonPropertyName("status")]
