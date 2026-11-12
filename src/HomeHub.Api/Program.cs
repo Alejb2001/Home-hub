@@ -37,8 +37,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Application services
-builder.Services.AddHttpClient<IGrowattClient, GrowattClient>();
+// Application services — Growatt needs a persistent cookie jar (session via JSESSIONID)
+builder.Services.AddHttpClient<IGrowattClient, GrowattClient>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        CookieContainer = new System.Net.CookieContainer(),
+        UseCookies = true,
+        AllowAutoRedirect = true,
+    });
 builder.Services.AddScoped<ISolarService, SolarService>();
 builder.Services.AddHostedService<GrowattSyncService>();
 

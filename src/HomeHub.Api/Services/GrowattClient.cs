@@ -34,6 +34,7 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             new KeyValuePair<string, string>("account", _user),
             new KeyValuePair<string, string>("password", ""),
             new KeyValuePair<string, string>("validateCode", ""),
+            new KeyValuePair<string, string>("loginType", "0"),
             new KeyValuePair<string, string>("isReadPact", "0"),
             new KeyValuePair<string, string>("passwordCrc", passwordHash)
         ]);
@@ -44,11 +45,13 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
+        logger.LogInformation("Growatt login response: {Json}", json);
         var result = JsonSerializer.Deserialize<GrowattLoginResponse>(json);
 
         if (result?.Result != 1)
         {
-            logger.LogError("Growatt login failed: {Message}", result?.Msg ?? "unknown error");
+            logger.LogError("Growatt login failed: result={Result}, msg={Message}, raw={Raw}",
+                result?.Result, result?.Msg ?? "null", json.Length > 200 ? json[..200] : json);
             throw new GrowattApiException($"Growatt login failed: {result?.Msg}");
         }
 
