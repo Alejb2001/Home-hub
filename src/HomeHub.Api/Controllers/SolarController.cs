@@ -10,7 +10,8 @@ namespace HomeHub.Api.Controllers;
 [Authorize]
 public class SolarController(ISolarService solarService) : ControllerBase
 {
-    private long GetUserId() => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private long GetUserId() =>
+        long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(CancellationToken ct)

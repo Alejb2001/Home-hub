@@ -14,7 +14,8 @@ namespace HomeHub.Api.Controllers;
 [Authorize]
 public class HomeController(AppDbContext db, GrowattClientFactory growattFactory) : ControllerBase
 {
-    private long GetUserId() => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private long GetUserId() =>
+        long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
     [HttpGet]
     public async Task<IActionResult> GetHome(CancellationToken ct)
