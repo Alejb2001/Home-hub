@@ -35,19 +35,86 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`)
+    const body = await res.json().catch(() => ({}))
+    throw new Error((body as { message?: string }).message ?? `API error ${res.status}`)
   }
 
   return res.json() as Promise<T>
 }
 
 // Auth
-export async function login(username: string, password: string): Promise<void> {
+export async function register(email: string, password: string): Promise<void> {
+  await request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function login(email: string, password: string): Promise<void> {
   const data = await request<{ token: string }>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   })
   setToken(data.token)
+}
+
+// Home
+export interface ServiceConfigDto {
+  id: number
+  type: string
+  displayName: string
+  plantId: string | null
+  enabled: boolean
+  credentialsUsername: string
+}
+
+export interface HomeDto {
+  id: number
+  name: string
+  services: ServiceConfigDto[]
+}
+
+export function getHome(): Promise<HomeDto> {
+  return request<HomeDto>('/home')
+}
+
+export function updateHomeName(name: string): Promise<{ name: string }> {
+  return request('/home/name', {
+    method: 'PUT',
+    body: JSON.stringify({ name }),
+  })
+}
+
+export function addService(
+  type: string,
+  displayName: string,
+  username: string,
+  password: string,
+): Promise<ServiceConfigDto> {
+  return request('/home/services', {
+    method: 'POST',
+    body: JSON.stringify({ type, displayName, username, password }),
+  })
+}
+
+export function updateService(
+  id: number,
+  displayName: string,
+  username: string,
+  password: string,
+): Promise<ServiceConfigDto> {
+  return request(`/home/services/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ type: 'growatt', displayName, username, password }),
+  })
+}
+
+export function toggleService(id: number): Promise<ServiceConfigDto> {
+  return request(`/home/services/${id}/toggle`, { method: 'PUT' })
+}
+
+export function deleteService(id: number): Promise<void> {
+  return request(`/home/services/${id}`, { method: 'DELETE' })
 }
 
 // Solar

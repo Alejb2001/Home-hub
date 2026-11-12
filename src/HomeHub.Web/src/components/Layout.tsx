@@ -28,6 +28,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-6">
           <Link to="/" className={navClass('/')}>Dashboard</Link>
           <Link to="/history" className={navClass('/history')}>Historial</Link>
+          <Link to="/home" className={navClass('/home')}>Mi Hogar</Link>
           <button
             onClick={handleLogout}
             className="text-xs font-mono text-slate-600 hover:text-red-400 uppercase tracking-widest transition-colors"

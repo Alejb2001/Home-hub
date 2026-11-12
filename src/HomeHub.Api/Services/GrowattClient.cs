@@ -6,32 +6,20 @@ using HomeHub.Api.Models;
 
 namespace HomeHub.Api.Services;
 
-public class GrowattClient(HttpClient httpClient, IConfiguration configuration, ILogger<GrowattClient> logger)
+public class GrowattClient(HttpClient httpClient, string user, string password, ILogger<GrowattClient> logger)
     : IGrowattClient
 {
-    private static readonly string DefaultServerUrl = "https://server.growatt.com";
-
-    private readonly string _serverUrl =
-        configuration["GROWATT_SERVER_URL"] ?? DefaultServerUrl;
-
-    private readonly string _user =
-        configuration["GROWATT_USER"]
-        ?? throw new InvalidOperationException("GROWATT_USER is not configured.");
-
-    private readonly string _password =
-        configuration["GROWATT_PASSWORD"]
-        ?? throw new InvalidOperationException("GROWATT_PASSWORD is not configured.");
-
+    private const string ServerUrl = "https://server.growatt.com";
     private bool _isLoggedIn = false;
 
     private async Task EnsureLoggedInAsync(CancellationToken ct)
     {
         if (_isLoggedIn) return;
 
-        var passwordHash = ComputeMd5(_password);
+        var passwordHash = ComputeMd5(password);
 
         var content = new FormUrlEncodedContent([
-            new KeyValuePair<string, string>("account", _user),
+            new KeyValuePair<string, string>("account", user),
             new KeyValuePair<string, string>("password", ""),
             new KeyValuePair<string, string>("validateCode", ""),
             new KeyValuePair<string, string>("loginType", "0"),
@@ -39,7 +27,7 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             new KeyValuePair<string, string>("passwordCrc", passwordHash)
         ]);
 
-        var response = await httpClient.PostAsync($"{_serverUrl}/login", content, ct);
+        var response = await httpClient.PostAsync($"{ServerUrl}/login", content, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
@@ -53,17 +41,15 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         }
 
         _isLoggedIn = true;
-        logger.LogInformation("Growatt login successful for user {User}", _user);
+        logger.LogInformation("Growatt login successful for user {User}", user);
     }
 
-    // Returns the first plant's ID and name. InverterSn is populated later via GetCurrentReadingAsync.
     public async Task<GrowattPlantInfo> GetPlantInfoAsync(CancellationToken ct = default)
     {
         await EnsureLoggedInAsync(ct);
 
-        // POST /index/getPlantListTitle — returns a JSON array of plants (session-based, no userId needed)
         var response = await httpClient.PostAsync(
-            $"{_serverUrl}/index/getPlantListTitle",
+            $"{ServerUrl}/index/getPlantListTitle",
             new FormUrlEncodedContent([]), ct);
         response.EnsureSuccessStatusCode();
 
@@ -77,8 +63,6 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         return new GrowattPlantInfo(plant.Id, plant.PlantName, "");
     }
 
-    // Fetches all device data for the plant in one call.
-    // inverterSn param is unused — the response provides the actual SN.
     public async Task<SolarReading> GetCurrentReadingAsync(
         string plantId, string inverterSn, CancellationToken ct = default)
     {
@@ -90,7 +74,7 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
         ]);
 
         var response = await httpClient.PostAsync(
-            $"{_serverUrl}/panel/getDevicesByPlantList", content, ct);
+            $"{ServerUrl}/panel/getDevicesByPlantList", content, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
@@ -127,7 +111,7 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
 
 public class GrowattApiException(string message) : Exception(message);
 
-// --- Response DTOs (private to this file) ---
+// --- Response DTOs ---
 
 file class GrowattLoginResponse
 {
@@ -138,7 +122,6 @@ file class GrowattLoginResponse
     public string? Msg { get; set; }
 }
 
-// POST /index/getPlantListTitle returns a JSON array of these
 file class GrowattPlantTitle
 {
     [JsonPropertyName("id")]
@@ -148,7 +131,6 @@ file class GrowattPlantTitle
     public string PlantName { get; set; } = "";
 }
 
-// POST /panel/getDevicesByPlantList
 file class GrowattDeviceListResponse
 {
     [JsonPropertyName("result")]

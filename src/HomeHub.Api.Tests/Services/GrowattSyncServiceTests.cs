@@ -1,3 +1,4 @@
+using System.Text.Json;
 using HomeHub.Api.BackgroundJobs;
 using HomeHub.Api.Data;
 using HomeHub.Api.Models;
@@ -20,11 +21,11 @@ public class GrowattSyncServiceTests
         return new AppDbContext(options);
     }
 
-    private static IServiceScopeFactory CreateScopeFactory(AppDbContext db, IGrowattClient client)
+    private static IServiceScopeFactory CreateScopeFactory(AppDbContext db)
     {
         var services = new ServiceCollection();
         services.AddSingleton(db);
-        services.AddSingleton(client);
+        services.AddSingleton<AppDbContext>(db);
         var provider = services.BuildServiceProvider();
 
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
@@ -34,10 +35,34 @@ public class GrowattSyncServiceTests
         return scopeFactoryMock.Object;
     }
 
+    private static async Task<ServiceConfig> SeedServiceConfigAsync(AppDbContext db)
+    {
+        var user = new User { Email = "test@test.com", PasswordHash = "hash" };
+        var home = new Home { Name = "Test", User = user };
+        db.Users.Add(user);
+        db.Homes.Add(home);
+        await db.SaveChangesAsync();
+
+        var creds = JsonSerializer.Serialize(new { username = "u", password = "p" });
+        var svc = new ServiceConfig
+        {
+            HomeId = home.Id,
+            Type = "growatt",
+            DisplayName = "Test",
+            CredentialsJson = creds,
+            Enabled = true
+        };
+        db.ServiceConfigs.Add(svc);
+        await db.SaveChangesAsync();
+        return svc;
+    }
+
     [Fact]
-    public async Task SyncOnce_Success_SavesReadingAndSuccessLog()
+    public async Task SyncAll_WithGrowattService_SavesReadingAndSuccessLog()
     {
         var db = CreateInMemoryDb();
+        await SeedServiceConfigAsync(db);
+
         var plantInfo = new GrowattPlantInfo("plant1", "My Plant", "INV001");
         var reading = new SolarReading
         {
@@ -54,13 +79,17 @@ public class GrowattSyncServiceTests
         clientMock.Setup(c => c.GetPlantInfoAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(plantInfo);
         clientMock.Setup(c => c.GetCurrentReadingAsync(
-                plantInfo.PlantId, plantInfo.InverterSn, It.IsAny<CancellationToken>()))
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(reading);
 
-        var scopeFactory = CreateScopeFactory(db, clientMock.Object);
-        var service = new GrowattSyncService(scopeFactory, NullLogger<GrowattSyncService>.Instance);
+        var factory = new GrowattClientFactory((_, _) => clientMock.Object);
+        var equipmentStore = new EquipmentStore();
+        var scopeFactory = CreateScopeFactory(db);
+        var service = new GrowattSyncService(
+            scopeFactory, equipmentStore, factory,
+            NullLogger<GrowattSyncService>.Instance);
 
-        await service.SyncOnceAsync(CancellationToken.None);
+        await service.SyncAllAsync(CancellationToken.None);
 
         Assert.Equal(1, await db.SolarReadings.CountAsync());
         var log = await db.SyncLogs.FirstAsync();
@@ -69,22 +98,47 @@ public class GrowattSyncServiceTests
     }
 
     [Fact]
-    public async Task SyncOnce_ClientThrows_SavesErrorLog_DoesNotRethrow()
+    public async Task SyncAll_ClientThrows_SavesErrorLog_DoesNotRethrow()
     {
         var db = CreateInMemoryDb();
+        await SeedServiceConfigAsync(db);
+
         var clientMock = new Mock<IGrowattClient>();
         clientMock.Setup(c => c.GetPlantInfoAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("connection refused"));
 
-        var scopeFactory = CreateScopeFactory(db, clientMock.Object);
-        var service = new GrowattSyncService(scopeFactory, NullLogger<GrowattSyncService>.Instance);
+        var factory = new GrowattClientFactory((_, _) => clientMock.Object);
+        var equipmentStore = new EquipmentStore();
+        var scopeFactory = CreateScopeFactory(db);
+        var service = new GrowattSyncService(
+            scopeFactory, equipmentStore, factory,
+            NullLogger<GrowattSyncService>.Instance);
 
         // Should not throw
-        await service.SyncOnceAsync(CancellationToken.None);
+        await service.SyncAllAsync(CancellationToken.None);
 
         Assert.Equal(0, await db.SolarReadings.CountAsync());
         var log = await db.SyncLogs.FirstAsync();
         Assert.False(log.Success);
         Assert.Contains("connection refused", log.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task SyncAll_NoServices_DoesNothing()
+    {
+        var db = CreateInMemoryDb();
+        var clientMock = new Mock<IGrowattClient>();
+        var factory = new GrowattClientFactory((_, _) => clientMock.Object);
+        var equipmentStore = new EquipmentStore();
+        var scopeFactory = CreateScopeFactory(db);
+        var service = new GrowattSyncService(
+            scopeFactory, equipmentStore, factory,
+            NullLogger<GrowattSyncService>.Instance);
+
+        await service.SyncAllAsync(CancellationToken.None);
+
+        Assert.Equal(0, await db.SolarReadings.CountAsync());
+        Assert.Equal(0, await db.SyncLogs.CountAsync());
+        clientMock.Verify(c => c.GetPlantInfoAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

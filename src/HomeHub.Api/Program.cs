@@ -37,20 +37,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Application services — Growatt needs a persistent cookie jar (session via JSESSIONID)
-builder.Services.AddHttpClient<IGrowattClient, GrowattClient>()
-    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-    {
-        CookieContainer = new System.Net.CookieContainer(),
-        UseCookies = true,
-        AllowAutoRedirect = true,
-    })
-    .ConfigureHttpClient(client =>
-    {
-        client.DefaultRequestHeaders.Add("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
-    });
+// Growatt — per-credential clients managed by factory (each user has their own session)
+builder.Services.AddSingleton<GrowattClientFactory>();
 builder.Services.AddSingleton<EquipmentStore>();
 builder.Services.AddScoped<ISolarService, SolarService>();
 builder.Services.AddHostedService<GrowattSyncService>();
@@ -87,7 +75,6 @@ app.MapControllers();
 app.MapFallbackToFile("index.html");
 
 // Converts postgresql:// URI to Npgsql key=value format.
-// Npgsql 8+ dropped URI support; PaaS platforms (Render, Railway, Heroku) emit URIs.
 static string ConvertConnectionString(string cs)
 {
     if (!cs.StartsWith("postgresql://") && !cs.StartsWith("postgres://"))

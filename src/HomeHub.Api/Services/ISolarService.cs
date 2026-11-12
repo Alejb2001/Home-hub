@@ -26,7 +26,7 @@ public record SolarStats(
 
 public interface ISolarService
 {
-    Task<SolarSummary?> GetSummaryAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<SolarReading>> GetHistoryAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default);
-    Task<SolarStats> GetStatsAsync(string period, CancellationToken cancellationToken = default);
+    Task<SolarSummary?> GetSummaryAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SolarReading>> GetHistoryAsync(long userId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default);
+    Task<SolarStats> GetStatsAsync(long userId, string period, CancellationToken cancellationToken = default);
 }

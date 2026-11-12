@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 
 export default function Login() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -14,10 +14,10 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(username, password)
+      await login(email, password)
       navigate('/')
-    } catch {
-      setError('Usuario o contrasena incorrectos.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Usuario o contrasena incorrectos.')
     } finally {
       setLoading(false)
     }
@@ -36,13 +36,14 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
             <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-              Usuario
+              Correo electronico
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
               className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
             />
           </div>
@@ -73,6 +74,13 @@ export default function Login() {
           >
             {loading ? 'Verificando...' : 'Acceder'}
           </button>
+
+          <p className="text-center font-mono text-xs text-slate-500">
+            No tienes cuenta?{' '}
+            <Link to="/register" className="text-amber-400 hover:text-amber-300 transition-colors">
+              Crear cuenta
+            </Link>
+          </p>
         </form>
       </div>
     </div>

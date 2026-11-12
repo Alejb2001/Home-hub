@@ -3,7 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { isAuthenticated } from './api/client'
 import Dashboard from './pages/Dashboard'
 import History from './pages/History'
+import HomeAdmin from './pages/HomeAdmin'
 import Login from './pages/Login'
+import Register from './pages/Register'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +26,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route
             path="/"
             element={
@@ -37,6 +40,14 @@ export default function App() {
             element={
               <PrivateRoute>
                 <History />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              <PrivateRoute>
+                <HomeAdmin />
               </PrivateRoute>
             }
           />

@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace HomeHub.Api.Services;
 
 public record EquipmentSnapshot(
@@ -8,14 +10,16 @@ public record EquipmentSnapshot(
 );
 
 /// <summary>
-/// Singleton that holds the latest equipment info from Growatt (not persisted to DB).
+/// Singleton that holds the latest equipment info from Growatt per service config.
 /// Updated by GrowattSyncService on each successful sync.
 /// </summary>
 public class EquipmentStore
 {
-    private volatile EquipmentSnapshot? _current;
+    private readonly ConcurrentDictionary<long, EquipmentSnapshot> _snapshots = new();
 
-    public EquipmentSnapshot? Current => _current;
+    public EquipmentSnapshot? Get(long serviceConfigId) =>
+        _snapshots.TryGetValue(serviceConfigId, out var snap) ? snap : null;
 
-    public void Update(EquipmentSnapshot snap) => _current = snap;
+    public void Update(long serviceConfigId, EquipmentSnapshot snap) =>
+        _snapshots[serviceConfigId] = snap;
 }
