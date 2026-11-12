@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HomeHub.Api.Services;
 
-public class SolarService(AppDbContext db) : ISolarService
+public class SolarService(AppDbContext db, EquipmentStore equipmentStore) : ISolarService
 {
     public async Task<SolarSummary?> GetSummaryAsync(CancellationToken ct = default)
     {
@@ -14,16 +14,29 @@ public class SolarService(AppDbContext db) : ISolarService
 
         if (latest is null) return null;
 
+        // Monthly energy: sum of each day's max eToday for current month
+        var now = DateTimeOffset.UtcNow;
+        var firstOfMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var monthReadings = await db.SolarReadings
+            .Where(r => r.TimestampUtc >= firstOfMonth)
+            .ToListAsync(ct);
+        var energyMonth = monthReadings
+            .GroupBy(r => r.TimestampUtc.Date)
+            .Sum(g => g.Max(r => r.EnergyTodayKwh));
+
+        // Prefer live equipment info from last sync; fall back to in-memory store
+        var eq = equipmentStore.Current;
+
         return new SolarSummary(
             latest.PowerW,
             latest.EnergyTodayKwh,
-            latest.EnergyMonthKwh ?? 0,
+            energyMonth,
             latest.EnergyTotalKwh,
             latest.Status,
             latest.TimestampUtc,
-            latest.DeviceModel ?? "",
-            latest.NominalPowerW ?? 0,
-            latest.PlantName ?? "",
+            eq?.DeviceModel ?? "",
+            eq?.NominalPowerW ?? 0,
+            eq?.PlantName ?? "",
             Math.Round(latest.EnergyTotalKwh * 0.997m, 1),
             Math.Round(latest.EnergyTotalKwh * 0.055m, 0)
         );

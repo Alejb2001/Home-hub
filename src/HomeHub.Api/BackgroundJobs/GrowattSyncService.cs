@@ -6,6 +6,7 @@ namespace HomeHub.Api.BackgroundJobs;
 
 public class GrowattSyncService(
     IServiceScopeFactory scopeFactory,
+    EquipmentStore equipmentStore,
     ILogger<GrowattSyncService> logger) : BackgroundService
 {
     private static readonly TimeSpan SyncInterval = TimeSpan.FromHours(1);
@@ -41,6 +42,14 @@ public class GrowattSyncService(
             var reading = await growattClient.GetCurrentReadingAsync(
                 plantInfo.PlantId, plantInfo.InverterSn, ct);
 
+            // Update equipment info singleton (not persisted to DB)
+            equipmentStore.Update(new EquipmentSnapshot(
+                reading.DeviceModel ?? "",
+                reading.NominalPowerW ?? 0,
+                reading.PlantName ?? "",
+                reading.EnergyMonthKwh ?? 0
+            ));
+
             db.SolarReadings.Add(reading);
 
             db.SyncLogs.Add(new SyncLog
@@ -52,8 +61,8 @@ public class GrowattSyncService(
 
             await db.SaveChangesAsync(ct);
             logger.LogInformation(
-                "Growatt sync complete. Power: {Power}W, Today: {Today}kWh",
-                reading.PowerW, reading.EnergyTodayKwh);
+                "Growatt sync complete. Power: {Power}W, Today: {Today}kWh, Month: {Month}kWh, Model: {Model}",
+                reading.PowerW, reading.EnergyTodayKwh, reading.EnergyMonthKwh, reading.DeviceModel);
         }
         catch (Exception ex)
         {

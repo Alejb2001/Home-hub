@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace HomeHub.Api.Models;
 
@@ -35,19 +36,11 @@ public class SolarReading
     [Column("status")]
     public short Status { get; set; }
 
-    [Column("energy_month_kwh")]
-    public decimal? EnergyMonthKwh { get; set; }
-
-    [Column("device_model")]
-    [MaxLength(50)]
-    public string? DeviceModel { get; set; }
-
-    [Column("nominal_power_w")]
-    public decimal? NominalPowerW { get; set; }
-
-    [Column("plant_name")]
-    [MaxLength(100)]
-    public string? PlantName { get; set; }
+    // Not persisted — populated by GrowattClient in memory, used by EquipmentStore
+    [NotMapped] public decimal? EnergyMonthKwh { get; set; }
+    [NotMapped] public string? DeviceModel { get; set; }
+    [NotMapped] public decimal? NominalPowerW { get; set; }
+    [NotMapped] public string? PlantName { get; set; }
 
     [Column("created_at")]
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
