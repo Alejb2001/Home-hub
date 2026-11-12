@@ -109,8 +109,12 @@ public class GrowattClient(HttpClient httpClient, IConfiguration configuration, 
             TimestampUtc = DateTimeOffset.UtcNow,
             PowerW = decimal.TryParse(device.Pac, out var pac) ? pac : 0,
             EnergyTodayKwh = decimal.TryParse(device.EToday, out var etoday) ? etoday : 0,
+            EnergyMonthKwh = decimal.TryParse(device.EMonth, out var emonth) ? emonth : null,
             EnergyTotalKwh = decimal.TryParse(device.ETotal, out var etotal) ? etotal : 0,
-            Status = short.TryParse(device.Status, out var status) ? status : (short)0
+            Status = short.TryParse(device.Status, out var status) ? status : (short)0,
+            DeviceModel = device.DeviceModel,
+            NominalPowerW = decimal.TryParse(device.NominalPower, out var nomPow) ? nomPow : null,
+            PlantName = device.PlantName
         };
     }
 
@@ -171,9 +175,21 @@ file class GrowattDeviceData
     [JsonPropertyName("eToday")]
     public string? EToday { get; set; }
 
+    [JsonPropertyName("eMonth")]
+    public string? EMonth { get; set; }
+
     [JsonPropertyName("eTotal")]
     public string? ETotal { get; set; }
 
     [JsonPropertyName("status")]
     public string? Status { get; set; }
+
+    [JsonPropertyName("deviceModel")]
+    public string? DeviceModel { get; set; }
+
+    [JsonPropertyName("nominalPower")]
+    public string? NominalPower { get; set; }
+
+    [JsonPropertyName("plantName")]
+    public string? PlantName { get; set; }
 }

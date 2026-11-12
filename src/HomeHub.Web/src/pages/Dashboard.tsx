@@ -28,11 +28,11 @@ const CHART = {
   },
 }
 
-function StatusBadge({ status }: { status: number }) {
+function StatusDot({ status }: { status: number }) {
   const online = status === 1
   return (
     <span
-      className={`inline-flex items-center gap-2 px-3 py-1.5 font-mono text-xs uppercase tracking-widest border ${
+      className={`inline-flex items-center gap-2 px-3 py-1 font-mono text-xs uppercase tracking-widest border ${
         online
           ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
           : 'border-red-500/40 bg-red-500/10 text-red-400'
@@ -44,36 +44,45 @@ function StatusBadge({ status }: { status: number }) {
   )
 }
 
-function SummaryCard({
+function StatCard({
   label,
   value,
   unit,
-  children,
+  sub,
 }: {
   label: string
   value: string
   unit: string
-  children?: React.ReactNode
+  sub?: string
 }) {
   return (
-    <div className="bg-slate-800 border border-slate-700 border-t-2 border-t-amber-400/70 p-5 flex flex-col gap-2">
+    <div className="bg-slate-800 border border-slate-700 border-t-2 border-t-amber-400/70 p-4 flex flex-col gap-1.5">
       <span className="font-mono text-xs text-slate-500 uppercase tracking-widest">{label}</span>
       <div className="flex items-baseline gap-2">
-        <span className="font-mono text-3xl font-bold text-slate-100">{value}</span>
+        <span className="font-mono text-2xl font-bold text-slate-100">{value}</span>
         {unit && <span className="font-mono text-sm text-amber-400">{unit}</span>}
       </div>
-      {children}
+      {sub && <span className="font-mono text-xs text-slate-600">{sub}</span>}
     </div>
   )
 }
 
-function SectionHeader({ children }: { children: React.ReactNode }) {
+function ImpactRow({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="flex items-center gap-3 mb-4">
-      <span className="w-0.5 h-5 bg-amber-400 inline-block" />
-      <h1 className="font-mono text-xs font-bold text-slate-300 uppercase tracking-widest">
-        {children}
-      </h1>
+    <div className="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0">
+      <span className="font-mono text-xs text-slate-500 uppercase tracking-widest">{label}</span>
+      <span className="font-mono text-sm font-bold text-slate-200">
+        {value} <span className="text-amber-400 font-normal text-xs">{unit}</span>
+      </span>
+    </div>
+  )
+}
+
+function EquipRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0">
+      <span className="font-mono text-xs text-slate-500 uppercase tracking-widest">{label}</span>
+      <span className="font-mono text-xs text-slate-200 text-right max-w-[55%] truncate">{value}</span>
     </div>
   )
 }
@@ -132,53 +141,49 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <SectionHeader>Paneles Solares — Hoy</SectionHeader>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <span className="w-0.5 h-5 bg-amber-400 inline-block" />
+          <h1 className="font-mono text-xs font-bold text-slate-300 uppercase tracking-widest">
+            {summary?.plantName || 'Paneles Solares'} — Hoy
+          </h1>
+        </div>
+        {summary && <StatusDot status={summary.status} />}
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        <SummaryCard
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <StatCard
           label="Potencia actual"
           value={summary ? summary.powerW.toFixed(0) : '—'}
           unit="W"
         />
-        <SummaryCard
-          label="Energia generada hoy"
+        <StatCard
+          label="Energia hoy"
           value={summary ? summary.energyTodayKwh.toFixed(2) : '—'}
           unit="kWh"
         />
-        <SummaryCard label="Estado del inversor" value="" unit="">
-          {summary ? (
-            <StatusBadge status={summary.status} />
-          ) : (
-            <span className="font-mono text-slate-600">—</span>
-          )}
-        </SummaryCard>
+        <StatCard
+          label="Este mes"
+          value={summary ? summary.energyMonthKwh.toFixed(1) : '—'}
+          unit="kWh"
+        />
+        <StatCard
+          label="Total acumulado"
+          value={summary ? summary.energyTotalKwh.toFixed(1) : '—'}
+          unit="kWh"
+          sub={summary ? `${summary.nominalPowerW.toFixed(0)} W nominales` : undefined}
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-slate-800 border border-slate-700 p-5">
-          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
-            Energia — ultimos 7 dias (kWh)
-          </h2>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dailyEnergy} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
-              <XAxis dataKey="date" tick={CHART.tick} axisLine={false} tickLine={false} />
-              <YAxis tick={CHART.tick} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(v) => [`${Number(v).toFixed(2)} kWh`, 'Energia']}
-                contentStyle={CHART.tooltip.contentStyle}
-                cursor={{ fill: '#1e3a5f30' }}
-              />
-              <Bar dataKey="kwh" fill="#f59e0b" radius={[1, 1, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
         <div className="bg-slate-800 border border-slate-700 p-5">
           <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
             Potencia hoy (W)
           </h2>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={180}>
             <LineChart data={powerCurve} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
               <XAxis
@@ -193,15 +198,78 @@ export default function Dashboard() {
                 formatter={(v) => [`${Number(v).toFixed(0)} W`, 'Potencia']}
                 contentStyle={CHART.tooltip.contentStyle}
               />
-              <Line
-                type="monotone"
-                dataKey="watts"
-                stroke="#f59e0b"
-                dot={false}
-                strokeWidth={2}
-              />
+              <Line type="monotone" dataKey="watts" stroke="#f59e0b" dot={false} strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+
+        <div className="bg-slate-800 border border-slate-700 p-5">
+          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+            Energia — ultimos 7 dias (kWh)
+          </h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={dailyEnergy} margin={{ top: 0, right: 4, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke={CHART.grid} vertical={false} />
+              <XAxis dataKey="date" tick={CHART.tick} axisLine={false} tickLine={false} />
+              <YAxis tick={CHART.tick} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v) => [`${Number(v).toFixed(2)} kWh`, 'Energia']}
+                contentStyle={CHART.tooltip.contentStyle}
+                cursor={{ fill: '#1e3a5f30' }}
+              />
+              <Bar dataKey="kwh" fill="#f59e0b" radius={[1, 1, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Equipment + Impact */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Equipment */}
+        <div className="bg-slate-800 border border-slate-700 p-5">
+          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+            Instalacion
+          </h2>
+          {summary ? (
+            <>
+              <EquipRow label="Planta" value={summary.plantName || '—'} />
+              <EquipRow label="Inversor" value={summary.deviceModel || '—'} />
+              <EquipRow label="Capacidad nominal" value={`${summary.nominalPowerW.toFixed(0)} W`} />
+              <EquipRow label="Numero de serie" value={
+                (todayReadings?.[0]?.inverterSn) || '—'
+              } />
+            </>
+          ) : (
+            <span className="font-mono text-xs text-slate-600">Sin datos</span>
+          )}
+        </div>
+
+        {/* Environmental impact */}
+        <div className="bg-slate-800 border border-slate-700 p-5">
+          <h2 className="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4">
+            Impacto ambiental
+          </h2>
+          {summary ? (
+            <>
+              <ImpactRow
+                label="CO2 evitado"
+                value={summary.co2Kg.toFixed(1)}
+                unit="kg"
+              />
+              <ImpactRow
+                label="Arboles equivalentes"
+                value={summary.treesCount.toFixed(0)}
+                unit="arboles"
+              />
+              <ImpactRow
+                label="Carbon evitado"
+                value={(summary.energyTotalKwh * 0.4).toFixed(1)}
+                unit="kg"
+              />
+            </>
+          ) : (
+            <span className="font-mono text-xs text-slate-600">Sin datos</span>
+          )}
         </div>
       </div>
 

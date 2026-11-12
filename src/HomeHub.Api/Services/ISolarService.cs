@@ -5,9 +5,15 @@ namespace HomeHub.Api.Services;
 public record SolarSummary(
     decimal PowerW,
     decimal EnergyTodayKwh,
+    decimal EnergyMonthKwh,
     decimal EnergyTotalKwh,
     short Status,
-    DateTimeOffset LastUpdated
+    DateTimeOffset LastUpdated,
+    string DeviceModel,
+    decimal NominalPowerW,
+    string PlantName,
+    decimal Co2Kg,
+    decimal TreesCount
 );
 
 public record SolarStats(

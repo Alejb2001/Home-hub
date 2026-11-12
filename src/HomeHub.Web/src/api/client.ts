@@ -54,9 +54,15 @@ export async function login(username: string, password: string): Promise<void> {
 export interface SolarSummary {
   powerW: number
   energyTodayKwh: number
+  energyMonthKwh: number
   energyTotalKwh: number
   status: number
   lastUpdated: string
+  deviceModel: string
+  nominalPowerW: number
+  plantName: string
+  co2Kg: number
+  treesCount: number
 }
 
 export interface SolarReading {

@@ -17,9 +17,15 @@ public class SolarService(AppDbContext db) : ISolarService
         return new SolarSummary(
             latest.PowerW,
             latest.EnergyTodayKwh,
+            latest.EnergyMonthKwh ?? 0,
             latest.EnergyTotalKwh,
             latest.Status,
-            latest.TimestampUtc
+            latest.TimestampUtc,
+            latest.DeviceModel ?? "",
+            latest.NominalPowerW ?? 0,
+            latest.PlantName ?? "",
+            Math.Round(latest.EnergyTotalKwh * 0.997m, 1),
+            Math.Round(latest.EnergyTotalKwh * 0.055m, 0)
         );
     }
 

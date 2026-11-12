@@ -35,6 +35,16 @@ namespace HomeHub.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("DeviceModel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("device_model");
+
+                    b.Property<decimal?>("EnergyMonthKwh")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)")
+                        .HasColumnName("energy_month_kwh");
+
                     b.Property<decimal>("EnergyTodayKwh")
                         .HasPrecision(10, 3)
                         .HasColumnType("numeric(10,3)")
@@ -51,11 +61,21 @@ namespace HomeHub.Api.Data.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("inverter_sn");
 
+                    b.Property<decimal?>("NominalPowerW")
+                        .HasPrecision(10, 1)
+                        .HasColumnType("numeric(10,1)")
+                        .HasColumnName("nominal_power_w");
+
                     b.Property<string>("PlantId")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("plant_id");
+
+                    b.Property<string>("PlantName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("plant_name");
 
                     b.Property<decimal>("PowerW")
                         .HasPrecision(10, 2)
