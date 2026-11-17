@@ -51,7 +51,7 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
         if (home is null) return NotFound();
 
         var credJson = request.Type == "weather"
-            ? JsonSerializer.Serialize(new { apiKey = request.Username, lat = request.Lat ?? "", lon = request.Lon ?? "" })
+            ? JsonSerializer.Serialize(new { lat = request.Lat ?? "", lon = request.Lon ?? "" })
             : JsonSerializer.Serialize(new { username = request.Username, password = request.Password });
 
         var svc = new ServiceConfig
@@ -81,20 +81,18 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
 
         if (svc.Type == "weather")
         {
-            string existingApiKey = "", existingLat = "", existingLon = "";
+            string existingLat = "", existingLon = "";
             try
             {
                 using var doc = JsonDocument.Parse(svc.CredentialsJson);
-                existingApiKey = doc.RootElement.GetProperty("apiKey").GetString() ?? "";
                 existingLat = doc.RootElement.GetProperty("lat").GetString() ?? "";
                 existingLon = doc.RootElement.GetProperty("lon").GetString() ?? "";
             }
             catch { }
 
-            var newApiKey = !string.IsNullOrEmpty(request.Username) ? request.Username : existingApiKey;
             var newLat = !string.IsNullOrEmpty(request.Lat) ? request.Lat : existingLat;
             var newLon = !string.IsNullOrEmpty(request.Lon) ? request.Lon : existingLon;
-            svc.CredentialsJson = JsonSerializer.Serialize(new { apiKey = newApiKey, lat = newLat, lon = newLon });
+            svc.CredentialsJson = JsonSerializer.Serialize(new { lat = newLat, lon = newLon });
         }
         else if (!string.IsNullOrEmpty(request.Password))
         {
@@ -161,8 +159,8 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
             using var doc = JsonDocument.Parse(svc.CredentialsJson);
             if (svc.Type == "weather")
             {
-                var lat = doc.RootElement.GetProperty("lat").GetString() ?? "";
-                var lon = doc.RootElement.GetProperty("lon").GetString() ?? "";
+                var lat = doc.RootElement.TryGetProperty("lat", out var latEl) ? latEl.GetString() ?? "" : "";
+                var lon = doc.RootElement.TryGetProperty("lon", out var lonEl) ? lonEl.GetString() ?? "" : "";
                 credUsername = $"{lat}, {lon}";
                 metadata = new { lat, lon };
             }

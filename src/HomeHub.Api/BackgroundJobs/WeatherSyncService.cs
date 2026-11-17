@@ -8,6 +8,7 @@ namespace HomeHub.Api.BackgroundJobs;
 
 public class WeatherSyncService(
     IServiceScopeFactory scopeFactory,
+    IConfiguration configuration,
     ILogger<WeatherSyncService> logger) : BackgroundService
 {
     private static readonly TimeSpan SyncInterval = TimeSpan.FromHours(1);
@@ -56,6 +57,13 @@ public class WeatherSyncService(
 
         try
         {
+            var apiKey = configuration["OPENWEATHERMAP_API_KEY"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                logger.LogWarning("OPENWEATHERMAP_API_KEY not configured. Skipping weather sync for service {Id}.", serviceConfigId);
+                return;
+            }
+
             WeatherCredentials creds;
             try
             {
@@ -68,7 +76,7 @@ public class WeatherSyncService(
                 return;
             }
 
-            var client = new WeatherClient(_httpClient, creds.ApiKey, creds.Lat, creds.Lon,
+            var client = new WeatherClient(_httpClient, apiKey, creds.Lat, creds.Lon,
                 loggerFactory.CreateLogger<WeatherClient>());
 
             var reading = await client.GetCurrentAsync(serviceConfigId, ct);
@@ -88,7 +96,6 @@ public class WeatherSyncService(
 }
 
 file record WeatherCredentials(
-    [property: JsonPropertyName("apiKey")] string ApiKey,
     [property: JsonPropertyName("lat")] string Lat,
     [property: JsonPropertyName("lon")] string Lon
 );

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addService,
@@ -61,6 +61,30 @@ export default function HomeAdmin() {
   const [editingService, setEditingService] = useState<ServiceConfigDto | null>(null)
   const [form, setForm] = useState<ServiceFormState>(emptyForm)
   const [formError, setFormError] = useState('')
+  const [geoLoading, setGeoLoading] = useState(false)
+
+  const detectLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setFormError('Tu navegador no soporta geolocalización.')
+      return
+    }
+    setGeoLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((f) => ({
+          ...f,
+          lat: pos.coords.latitude.toFixed(4),
+          lon: pos.coords.longitude.toFixed(4),
+        }))
+        setGeoLoading(false)
+      },
+      () => {
+        setFormError('No se pudo obtener la ubicación. Verifica los permisos del navegador.')
+        setGeoLoading(false)
+      },
+      { timeout: 10000 },
+    )
+  }, [])
 
   const updateNameMut = useMutation({
     mutationFn: (name: string) => updateHomeName(name),
@@ -125,10 +149,6 @@ export default function HomeAdmin() {
       return
     }
     if (form.type === 'weather') {
-      if (!editingService && !form.username.trim()) {
-        setFormError('La API Key es requerida.')
-        return
-      }
       if (!form.lat.trim() || !form.lon.trim()) {
         setFormError('Latitud y longitud son requeridas.')
         return
@@ -366,18 +386,18 @@ export default function HomeAdmin() {
 
               {form.type === 'weather' && (
                 <>
-                  <div>
-                    <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-                      API Key OpenWeatherMap{editingService && ' (dejar vacio para mantener)'}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-mono text-xs text-slate-500 uppercase tracking-widest">
+                      Coordenadas
                     </label>
-                    <input
-                      type="password"
-                      value={form.username}
-                      onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                      className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                      autoComplete="off"
-                      placeholder={editingService ? '' : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
-                    />
+                    <button
+                      type="button"
+                      onClick={detectLocation}
+                      disabled={geoLoading}
+                      className="font-mono text-xs text-amber-400 hover:text-amber-300 uppercase tracking-widest disabled:opacity-40 transition-colors"
+                    >
+                      {geoLoading ? 'Detectando...' : 'Usar mi ubicacion'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
