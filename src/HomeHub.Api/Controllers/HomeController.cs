@@ -50,7 +50,9 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
         var home = await db.Homes.FirstOrDefaultAsync(h => h.UserId == userId, ct);
         if (home is null) return NotFound();
 
-        var credJson = JsonSerializer.Serialize(new { username = request.Username, password = request.Password });
+        var credJson = request.Type == "weather"
+            ? JsonSerializer.Serialize(new { apiKey = request.Username, lat = request.Lat ?? "", lon = request.Lon ?? "" })
+            : JsonSerializer.Serialize(new { username = request.Username, password = request.Password });
 
         var svc = new ServiceConfig
         {
@@ -77,7 +79,24 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
 
         svc.DisplayName = request.DisplayName;
 
-        if (!string.IsNullOrEmpty(request.Password))
+        if (svc.Type == "weather")
+        {
+            string existingApiKey = "", existingLat = "", existingLon = "";
+            try
+            {
+                using var doc = JsonDocument.Parse(svc.CredentialsJson);
+                existingApiKey = doc.RootElement.GetProperty("apiKey").GetString() ?? "";
+                existingLat = doc.RootElement.GetProperty("lat").GetString() ?? "";
+                existingLon = doc.RootElement.GetProperty("lon").GetString() ?? "";
+            }
+            catch { }
+
+            var newApiKey = !string.IsNullOrEmpty(request.Username) ? request.Username : existingApiKey;
+            var newLat = !string.IsNullOrEmpty(request.Lat) ? request.Lat : existingLat;
+            var newLon = !string.IsNullOrEmpty(request.Lon) ? request.Lon : existingLon;
+            svc.CredentialsJson = JsonSerializer.Serialize(new { apiKey = newApiKey, lat = newLat, lon = newLon });
+        }
+        else if (!string.IsNullOrEmpty(request.Password))
         {
             svc.CredentialsJson = JsonSerializer.Serialize(
                 new { username = request.Username, password = request.Password });
@@ -136,10 +155,21 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
     private static object MapService(ServiceConfig svc)
     {
         string credUsername = "";
+        object? metadata = null;
         try
         {
             using var doc = JsonDocument.Parse(svc.CredentialsJson);
-            credUsername = doc.RootElement.GetProperty("username").GetString() ?? "";
+            if (svc.Type == "weather")
+            {
+                var lat = doc.RootElement.GetProperty("lat").GetString() ?? "";
+                var lon = doc.RootElement.GetProperty("lon").GetString() ?? "";
+                credUsername = $"{lat}, {lon}";
+                metadata = new { lat, lon };
+            }
+            else
+            {
+                credUsername = doc.RootElement.GetProperty("username").GetString() ?? "";
+            }
         }
         catch { }
 
@@ -150,10 +180,11 @@ public class HomeController(AppDbContext db, GrowattClientFactory growattFactory
             displayName = svc.DisplayName,
             plantId = svc.PlantId,
             enabled = svc.Enabled,
-            credentialsUsername = credUsername
+            credentialsUsername = credUsername,
+            metadata
         };
     }
 }
 
 public record UpdateNameRequest(string Name);
-public record ServiceRequest(string Type, string DisplayName, string Username, string Password);
+public record ServiceRequest(string Type, string DisplayName, string Username, string Password, string? Lat = null, string? Lon = null);

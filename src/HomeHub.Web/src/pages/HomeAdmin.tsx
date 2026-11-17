@@ -11,7 +11,15 @@ import {
 } from '../api/client'
 import Layout from '../components/Layout'
 
-const SERVICE_TYPES = [{ value: 'growatt', label: 'Growatt (Paneles Solares)' }]
+const SERVICE_TYPES = [
+  { value: 'growatt', label: 'Growatt (Paneles Solares)' },
+  { value: 'weather', label: 'OpenWeatherMap (Clima)' },
+]
+
+const DEFAULT_DISPLAY_NAME: Record<string, string> = {
+  growatt: 'Paneles Solares',
+  weather: 'Clima',
+}
 
 function ServiceTypeLabel({ type }: { type: string }) {
   const colors: Record<string, string> = {
@@ -30,6 +38,8 @@ interface ServiceFormState {
   displayName: string
   username: string
   password: string
+  lat: string
+  lon: string
 }
 
 const emptyForm: ServiceFormState = {
@@ -37,6 +47,8 @@ const emptyForm: ServiceFormState = {
   displayName: 'Paneles Solares',
   username: '',
   password: '',
+  lat: '',
+  lon: '',
 }
 
 export default function HomeAdmin() {
@@ -56,13 +68,13 @@ export default function HomeAdmin() {
   })
 
   const addSvcMut = useMutation({
-    mutationFn: () => addService(form.type, form.displayName, form.username, form.password),
+    mutationFn: () => addService(form.type, form.displayName, form.username, form.password, form.lat || undefined, form.lon || undefined),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['home'] }); closeModal() },
     onError: (e) => setFormError(e instanceof Error ? e.message : 'Error al guardar.'),
   })
 
   const updateSvcMut = useMutation({
-    mutationFn: (id: number) => updateService(id, form.displayName, form.username, form.password),
+    mutationFn: (id: number) => updateService(id, form.type, form.displayName, form.username, form.password, form.lat || undefined, form.lon || undefined),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['home'] }); closeModal() },
     onError: (e) => setFormError(e instanceof Error ? e.message : 'Error al guardar.'),
   })
@@ -88,8 +100,10 @@ export default function HomeAdmin() {
     setForm({
       type: svc.type,
       displayName: svc.displayName,
-      username: svc.credentialsUsername,
+      username: '',
       password: '',
+      lat: svc.metadata?.lat ?? '',
+      lon: svc.metadata?.lon ?? '',
     })
     setFormError('')
     setEditingService(svc)
@@ -106,13 +120,28 @@ export default function HomeAdmin() {
   function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault()
     setFormError('')
-    if (!form.displayName.trim() || !form.username.trim()) {
-      setFormError('Nombre y usuario son requeridos.')
+    if (!form.displayName.trim()) {
+      setFormError('El nombre es requerido.')
       return
     }
-    if (!editingService && !form.password) {
-      setFormError('La contrasena es requerida.')
-      return
+    if (form.type === 'weather') {
+      if (!editingService && !form.username.trim()) {
+        setFormError('La API Key es requerida.')
+        return
+      }
+      if (!form.lat.trim() || !form.lon.trim()) {
+        setFormError('Latitud y longitud son requeridas.')
+        return
+      }
+    } else {
+      if (!form.username.trim()) {
+        setFormError('El usuario es requerido.')
+        return
+      }
+      if (!editingService && !form.password) {
+        setFormError('La contrasena es requerida.')
+        return
+      }
     }
     if (editingService) {
       updateSvcMut.mutate(editingService.id)
@@ -279,7 +308,11 @@ export default function HomeAdmin() {
                   </label>
                   <select
                     value={form.type}
-                    onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                    onChange={(e) => setForm((f) => ({
+                      ...f,
+                      type: e.target.value,
+                      displayName: DEFAULT_DISPLAY_NAME[e.target.value] ?? f.displayName,
+                    }))}
                     className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
                   >
                     {SERVICE_TYPES.map((t) => (
@@ -302,31 +335,78 @@ export default function HomeAdmin() {
                 />
               </div>
 
-              <div>
-                <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-                  Usuario Growatt
-                </label>
-                <input
-                  type="text"
-                  value={form.username}
-                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                  autoComplete="off"
-                />
-              </div>
+              {form.type === 'growatt' && (
+                <>
+                  <div>
+                    <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+                      Usuario Growatt
+                    </label>
+                    <input
+                      type="text"
+                      value={form.username}
+                      onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+                      Contrasena Growatt{editingService && ' (dejar vacio para mantener)'}
+                    </label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              )}
 
-              <div>
-                <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-                  Contrasena Growatt{editingService && ' (dejar vacio para mantener)'}
-                </label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
-                  autoComplete="new-password"
-                />
-              </div>
+              {form.type === 'weather' && (
+                <>
+                  <div>
+                    <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+                      API Key OpenWeatherMap{editingService && ' (dejar vacio para mantener)'}
+                    </label>
+                    <input
+                      type="password"
+                      value={form.username}
+                      onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                      className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                      autoComplete="off"
+                      placeholder={editingService ? '' : 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+                        Latitud
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lat}
+                        onChange={(e) => setForm((f) => ({ ...f, lat: e.target.value }))}
+                        className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                        placeholder="19.4326"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
+                        Longitud
+                      </label>
+                      <input
+                        type="text"
+                        value={form.lon}
+                        onChange={(e) => setForm((f) => ({ ...f, lon: e.target.value }))}
+                        className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
+                        placeholder="-99.1332"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {formError && (
                 <p className="font-mono text-xs text-amber-400 border border-amber-400/30 bg-amber-400/5 px-3 py-2">

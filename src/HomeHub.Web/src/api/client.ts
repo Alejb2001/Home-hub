@@ -66,6 +66,7 @@ export interface ServiceConfigDto {
   plantId: string | null
   enabled: boolean
   credentialsUsername: string
+  metadata: Record<string, string> | null
 }
 
 export interface HomeDto {
@@ -90,22 +91,27 @@ export function addService(
   displayName: string,
   username: string,
   password: string,
+  lat?: string,
+  lon?: string,
 ): Promise<ServiceConfigDto> {
   return request('/home/services', {
     method: 'POST',
-    body: JSON.stringify({ type, displayName, username, password }),
+    body: JSON.stringify({ type, displayName, username, password, lat, lon }),
   })
 }
 
 export function updateService(
   id: number,
+  type: string,
   displayName: string,
   username: string,
   password: string,
+  lat?: string,
+  lon?: string,
 ): Promise<ServiceConfigDto> {
   return request(`/home/services/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ type: 'growatt', displayName, username, password }),
+    body: JSON.stringify({ type, displayName, username, password, lat, lon }),
   })
 }
 
@@ -149,6 +155,21 @@ export interface SolarStats {
   maxPowerW: number
   from: string
   to: string
+}
+
+export interface WeatherCurrent {
+  tempC: number
+  cloudsPct: number
+  weatherId: number
+  description: string
+  humidityPct: number
+  windSpeedMs: number
+  timestampUtc: string
+}
+
+export async function getWeatherCurrent(): Promise<WeatherCurrent | null> {
+  const data = await request<WeatherCurrent | null>('/weather/current')
+  return data
 }
 
 export async function getSummary(): Promise<SolarSummary | null> {

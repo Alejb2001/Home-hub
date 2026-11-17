@@ -251,6 +251,64 @@ namespace HomeHub.Api.Data.Migrations
                     b.Navigation("Home");
                 });
 
+            modelBuilder.Entity("HomeHub.Api.Models.WeatherReading", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CloudsPct")
+                        .HasColumnType("integer")
+                        .HasColumnName("clouds_pct");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("HumidityPct")
+                        .HasColumnType("integer")
+                        .HasColumnName("humidity_pct");
+
+                    b.Property<long>("ServiceConfigId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("service_config_id");
+
+                    b.Property<decimal>("TempC")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("temp_c");
+
+                    b.Property<DateTimeOffset>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("timestamp_utc");
+
+                    b.Property<int>("WeatherId")
+                        .HasColumnType("integer")
+                        .HasColumnName("weather_id");
+
+                    b.Property<decimal>("WindSpeedMs")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasColumnName("wind_speed_ms");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceConfigId", "TimestampUtc")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_weather_readings_service_timestamp");
+
+                    b.ToTable("weather_readings");
+                });
+
             modelBuilder.Entity("HomeHub.Api.Models.User", b =>
                 {
                     b.Navigation("Home");

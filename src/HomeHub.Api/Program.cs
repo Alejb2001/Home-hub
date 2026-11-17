@@ -42,6 +42,7 @@ builder.Services.AddSingleton<GrowattClientFactory>();
 builder.Services.AddSingleton<EquipmentStore>();
 builder.Services.AddScoped<ISolarService, SolarService>();
 builder.Services.AddHostedService<GrowattSyncService>();
+builder.Services.AddHostedService<WeatherSyncService>();
 
 builder.Services.AddControllers();
 

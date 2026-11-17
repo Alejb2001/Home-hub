@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users => Set<User>();
     public DbSet<Home> Homes => Set<Home>();
     public DbSet<ServiceConfig> ServiceConfigs => Set<ServiceConfig>();
+    public DbSet<WeatherReading> WeatherReadings => Set<WeatherReading>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(h => h.Services)
                 .HasForeignKey(s => s.HomeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WeatherReading>(entity =>
+        {
+            entity.HasIndex(w => new { w.ServiceConfigId, w.TimestampUtc })
+                .HasDatabaseName("ix_weather_readings_service_timestamp")
+                .IsDescending(false, true);
+
+            entity.Property(w => w.TempC).HasPrecision(5, 2);
+            entity.Property(w => w.WindSpeedMs).HasPrecision(6, 2);
         });
     }
 }

@@ -10,8 +10,26 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { getSummary, getHistory } from '../api/client'
+import { getSummary, getHistory, getWeatherCurrent } from '../api/client'
 import Layout from '../components/Layout'
+
+function weatherEmoji(id: number): string {
+  if (id === 800) return '\u2600\uFE0F'
+  if (id <= 802) return '\uD83C\uDF24\uFE0F'
+  if (id <= 804) return '\u2601\uFE0F'
+  if (id >= 500 && id <= 531) return '\uD83C\uDF27\uFE0F'
+  if (id >= 200 && id <= 232) return '\u26C8\uFE0F'
+  if (id >= 300 && id <= 321) return '\uD83C\uDF26\uFE0F'
+  if (id >= 600 && id <= 622) return '\uD83C\uDF28\uFE0F'
+  return '\uD83C\uDF2B\uFE0F'
+}
+
+function solarContext(clouds: number): { msg: string; color: string } {
+  if (clouds <= 20) return { msg: 'Condiciones optimas', color: 'text-emerald-400' }
+  if (clouds <= 50) return { msg: 'Nubosidad moderada', color: 'text-amber-400' }
+  if (clouds <= 80) return { msg: 'Produccion posiblemente reducida', color: 'text-orange-400' }
+  return { msg: 'Alta nubosidad \u2014 produccion baja', color: 'text-red-400' }
+}
 
 const CHART = {
   grid: '#334155',
@@ -94,6 +112,12 @@ export default function Dashboard() {
     refetchInterval: 5 * 60 * 1000,
   })
 
+  const { data: weather } = useQuery({
+    queryKey: ['weather-current'],
+    queryFn: getWeatherCurrent,
+    refetchInterval: 60 * 60 * 1000,
+  })
+
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -151,6 +175,25 @@ export default function Dashboard() {
         </div>
         {summary && <StatusDot status={summary.status} />}
       </div>
+
+      {/* Weather context strip */}
+      {weather && (() => {
+        const ctx = solarContext(weather.cloudsPct)
+        return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-5 px-4 py-2.5 bg-slate-800/50 border border-slate-700/50">
+            <span className="text-base leading-none">{weatherEmoji(weather.weatherId)}</span>
+            <span className="font-mono text-xs text-slate-300 capitalize">{weather.description}</span>
+            <span className="font-mono text-xs text-slate-600">·</span>
+            <span className="font-mono text-xs text-slate-300">{weather.tempC.toFixed(1)}°C</span>
+            <span className="font-mono text-xs text-slate-600">·</span>
+            <span className="font-mono text-xs text-slate-400">{weather.cloudsPct}% nubosidad</span>
+            <span className="font-mono text-xs text-slate-600">·</span>
+            <span className="font-mono text-xs text-slate-500">{weather.humidityPct}% humedad</span>
+            <span className="font-mono text-xs text-slate-600 hidden sm:inline">·</span>
+            <span className={`font-mono text-xs font-semibold ${ctx.color}`}>{ctx.msg}</span>
+          </div>
+        )
+      })()}
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
