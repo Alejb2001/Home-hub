@@ -304,10 +304,10 @@ export default function HomeAdmin() {
 
               <div>
                 <label className="block font-mono text-xs text-slate-500 uppercase tracking-widest mb-1.5">
-                  Usuario Growatt (correo)
+                  Usuario Growatt
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
                   className="w-full bg-slate-900 border border-slate-600 text-slate-100 font-mono px-3 py-2 text-sm focus:outline-none focus:border-amber-400 transition-colors"
